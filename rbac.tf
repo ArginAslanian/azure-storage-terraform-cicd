@@ -28,3 +28,10 @@ resource "azurerm_role_assignment" "admin_archive_access" {
   role_definition_name = "Storage Blob Data Contributor"
   principal_id         = var.admin_group_object_id
 }
+
+# Grant the Reader Group visibility of the Resource Group in the portal
+resource "azurerm_role_assignment" "reader_rg_visibility" {
+  scope                = azurerm_resource_group.storage_project_rg.id
+  role_definition_name = "Reader"
+  principal_id         = var.reader_group_object_id
+}
