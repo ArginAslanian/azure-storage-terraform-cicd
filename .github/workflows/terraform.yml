@@ -1,0 +1,49 @@
+name: 'Terraform OIDC Deployment'
+
+# Trigger the workflow when code is pushed to the main branch
+on:
+  push:
+    branches:
+      - main
+
+# CRITICAL: These permissions are strictly required for OIDC to work
+permissions:
+  id-token: write 
+  contents: read
+
+# Map GitHub Repository Variables to the environment variables Terraform expects
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_USE_OIDC: true
+
+jobs:
+  terraform-deploy:
+    name: 'Terraform Init, Plan, and Apply'
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Pull the code from GitHub repository onto the runner
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Install the Terraform CLI on the runner
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      # 3. Initialize the backend (This uses OIDC to securely talk to your tfstate storage account)
+      - name: Terraform Init
+        run: terraform init
+
+      # 4. Run formatting check (Fails the pipeline if code isn't formatted properly)
+      - name: Terraform Format Check
+        run: terraform fmt -check
+
+      # 5. Generate the deployment plan and save it to a file
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+
+      # 6. Apply the exact plan generated in the previous step (Auto-approves since it's a push to main)
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
